@@ -4,7 +4,7 @@ const process = require('process');
 const readline = require('readline');
 
 let targetFilePath = path.join(__dirname, 'newText.txt');
-let readableStream = fs.createWriteStream(targetFilePath, 'utf-8');
+let writableStream = fs.createWriteStream(targetFilePath, 'utf-8');
 
 
 const rl = readline.createInterface({ 
@@ -18,7 +18,7 @@ rl.on('line', (input) => {
   if (input === 'exit') {
     rl.close();
   } else {
-    readableStream.write(input + '\n');
+    writableStream.write(input + '\n');
   }
 });
 
