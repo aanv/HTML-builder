@@ -1,4 +1,3 @@
-const fs = require('fs');
 const fsPromises = require('fs/promises');
 const path = require('path');
 
@@ -19,28 +18,24 @@ let newCssPath = path.join(distFolderPath, 'style.css');
 
 async function pageBuilder() {
   await createFolder(distFolderPath);
-  let html = await getFileContent(templatePath);
-  // console.log(htmlFileContent);
+  let html = await fsPromises.readFile(templatePath, 'utf-8');
+  html = await replaceTagsTo(html);
 
-  html = await replaceTemplate(html);
-  // console.log(html);
   await fsPromises.writeFile(newHtmlPath, html);
+  await mergeStyles();
+  await copyFolder(assetsFolderPath, newAssetsFolderPath);
 }
 
 async function createFolder(folderPath) {
   return fsPromises.mkdir(folderPath, {recursive: true})
 }
 
-async function getFileContent(path) {
-  return await fsPromises.readFile(path, 'utf-8');
-}
-
-async function replaceTemplate(file) {
+async function replaceTagsTo(file) {
 
   let fromIndex = 0;
   let tagsInTemplate = [];
 
-  for(let n = 0; fromIndex >=0; n++){
+  for(let n = 0; fromIndex >=0; n++) {
     let openBracketsIndex = file.indexOf('{{', fromIndex);
     fromIndex = openBracketsIndex;
     if (fromIndex >=0){
@@ -51,18 +46,47 @@ async function replaceTemplate(file) {
   }
 
   for(tag of tagsInTemplate) {
-    let htmlToReplace = await getFileContent(componentsFolderPath + `/${tag}.html`, 'utf-8');
+    let htmlToReplace = await fsPromises.readFile(componentsFolderPath + `/${tag}.html`, 'utf-8');
     file = await file.replace(`{{${tag}}}`, `${htmlToReplace}`);
   }
 
   return await file;
 }
 
+async function mergeStyles() {
+  let stylesArray = [];
+
+  await fsPromises.rm(newCssPath, { recursive: true, force: true });
+  let styleFiles = await fsPromises.readdir(stylesFolderPath, { withFileTypes: true });
+  
+  
+  for(file of styleFiles) {
+    let filePath = path.join(stylesFolderPath, file.name);
+    if(file.isFile() && path.extname(filePath) === '.css'){
+      let styleToPush = await fsPromises.readFile(filePath, 'utf-8');
+      styleToPush += '\n\n';
+      stylesArray.push(styleToPush);
+    }
+  }
+
+  await fsPromises.writeFile(newCssPath, stylesArray);
+}
+
+async function copyFolder(fromFolderPath, toFolderPath) {
+  await fsPromises.rm(toFolderPath, { recursive: true, force: true });
+  await createFolder(toFolderPath);
+  let filesToCopy = await fsPromises.readdir(fromFolderPath, { withFileTypes: true });
+  for(file of filesToCopy){
+    let sourceFilePath = path.join(fromFolderPath, file.name);
+    let newFilePath = path.join(toFolderPath, file.name);
+    
+    if(file.isDirectory()) {
+      await createFolder(newFilePath);
+      await copyFolder(sourceFilePath, newFilePath);
+    } else {
+      await fsPromises.copyFile(sourceFilePath, newFilePath);
+    }
+  }
+}
+
 pageBuilder();
-
-
-
-
-
-
-
