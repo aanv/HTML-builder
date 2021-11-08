@@ -13,6 +13,7 @@ files.then( data => {
       let fileExt = path.extname(filePath).split('.')[1];
 
       let fileStat = fsPromises.stat(filePath);
+      
       fileStat.then(stat => { 
         console.log(`${fileName} -  ${fileExt} - ${stat.size} bytes`);
       });
